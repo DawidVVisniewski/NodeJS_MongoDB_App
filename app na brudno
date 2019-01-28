@@ -1,0 +1,152 @@
+var express = require("express");
+var app = express();
+var bodyParser = require("body-parser");
+var mongoose = require("mongoose");
+var Campground = require("./models/campground");
+var Comment     = require("./models/comment");
+var seedDB      = require("./seeds");
+    
+
+mongoose.connect("mongodb://localhost:27017/yelp_camp", {useNewUrlParser: true});
+//nowa komenda do podlaczania serwera dla nowej wersji mongoose 
+
+app.use(bodyParser.urlencoded({extended:true}));
+app.set("view engine", "ejs");
+// from ejs package - line of code let me not writting .ejs everysingle time  and direct my app.js to views folder 
+seedDB();
+ /*Schema setup   this line of code i moved after my appliation started getting bigger to new created directory models 
+   where i have my schema models toDB ,so my main app is less messy
+
+var campgroundSchema = new mongoose.Schema({
+    name: String,
+    image: String,
+    description: String
+});
+
+var Campground = mongoose.model("Campground", campgroundSchema);*/
+
+/*Campground.create(
+  {
+      name: "Granite Hill", 
+      image: "https://farm1.staticflickr.com/60/215827008_6489cd30c3.jpg",
+      description: "This a huge Grsnite hill, no bathrooms. No water. Beautifull granitel."
+      
+  },
+  
+       function(err, campground){
+        if(err){
+            console.log(err);
+        }else 
+        console.log("NEWLY CREATED CAMPGROUNDS: ");
+        console.log(campground);
+        
+        
+    });*/
+
+
+
+/*var campgrounds = [
+         code i use before to run application without db and display content from array
+        {name: "Salmon Creek", image: "https://farm9.staticflickr.com/8442/7962474612_bf2baf67c0.jpg"},
+        {name: "Granite Hill", image: "https://farm1.staticflickr.com/60/215827008_6489cd30c3.jpg"},
+        {name: "Mountain Goat's Rest", image: "https://farm7.staticflickr.com/6057/6234565071_4d20668bbd.jpg"},
+        {name: "Salmon Creek", image: "https://farm9.staticflickr.com/8442/7962474612_bf2baf67c0.jpg"},
+        {name: "Granite Hill", image: "https://farm1.staticflickr.com/60/215827008_6489cd30c3.jpg"},
+        {name: "Mountain Goat's Rest", image: "https://farm7.staticflickr.com/6057/6234565071_4d20668bbd.jpg"},
+        {name: "Salmon Creek", image: "https://farm9.staticflickr.com/8442/7962474612_bf2baf67c0.jpg"},
+        {name: "Granite Hill", image: "https://farm1.staticflickr.com/60/215827008_6489cd30c3.jpg"},
+        {name: "Mountain Goat's Rest", image: "https://farm7.staticflickr.com/6057/6234565071_4d20668bbd.jpg"},
+];*/
+
+app.get("/", function(req, res){
+ // res.send("this will be landing page soon"); build first just to check is everything run correctly!
+   res.render("landing");
+});
+
+
+//INDEX ROUTE -DISPLAY ALL CAMPGROUNDS 
+app.get("/campgrounds", function(req, res){
+    //get all campgrounds from DB
+    Campground.find({}, function(err, allcampgrounds){
+        if(err){
+            console.log(err);
+        } else {
+            res.render("index", {campgrounds: allcampgrounds});
+    /*      wczesniej bylo tak
+            res.render("campgrounds", {campgrounds: campgrounds}); i w callback function bylo err, campgrounds 
+            colt zaznacyl ze nie jest to juz dluzej campgrounds z array w komentarzu powyzej 
+            tylko z callback function ktorej nazwe zmienilismy na allcampgrounds */
+        }
+        
+        
+        
+    });
+    
+});
+
+// CREATE ROUTE  - ADD NEW CAMPGROUND TO DB 
+app.post("/campgrounds", function(req, res){
+    //get data from form save it to variable and pass it to our create method 
+    
+    var name = req.body.name;
+    var image = req.body.image;
+    var desc =req.body.description;
+    var newCampground = {name:name, image:image, description:desc}
+    //campgrounds.push(newCampground); line used with array before campgrounds no more needed-commented
+    // Create new Campground and save to DB
+    Campground.create(newCampground, function(err, newlyCreated ){
+        if(err){
+        console.log(err);
+        }else {
+            //redirect back to campgrounds page 
+            res.redirect("/campgrounds");
+            }
+        });
+    
+});
+
+// NEW ROUTE - SHOW FORM TO CREATE NEW CAMPGROUND 
+app.get("/campgrounds/new", function(req, res){
+    res.render("new.ejs");
+});
+
+
+
+//SHOW show more info about one campground 
+app.get("/campgrounds/:id", function(req, res){
+     //find the campgrounds with provided id 
+     Campground.findById(req.params.id, function(err, foundCampground){
+         if(err){
+             console.log(err);
+         }else {
+         
+             res.render("show", {campground: foundCampground});
+         }
+         
+     });
+     //render show template with that campground 
+})
+
+
+app.listen(process.env.PORT, process.env.IP, function(){
+   console.log("server has started!!!");
+});
+==============
+show.ejs 
+=============
+<% include ../partials/header %>
+<h1><%=campground.name%></h1>
+
+<img src="<%= campground.image %>">
+
+<p><%= campground.description %></p>
+
+<p>
+    <a class="btn btn-success" href="/campgrounds/<%= campground._id %>/comments/new">Add New Comment</a>
+</p>
+<% campground.comments.forEach(function(comment){ %>
+    <p> 
+    <strong> <%= comment.author%></strong> - <%= comment.text %> 
+    </p>
+<% }) %>
+<% include ../partials/footer %> 
